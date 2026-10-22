@@ -1,0 +1,313 @@
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bilyard POS</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#0b1220;color:#f1f5f9}
+header{padding:20px;background:#123d32;border-bottom:1px solid #28594b}
+header h1{margin:0;font-size:24px}
+header p{margin:6px 0 0;color:#c5ded4}
+main{max-width:1200px;margin:auto;padding:18px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.stat,.panel{background:#151f30;border:1px solid #28364b;border-radius:14px;padding:16px}
+.stat span{color:#aab8ca;font-size:13px}
+.stat strong{display:block;font-size:23px;margin-top:8px;color:#64e2a0}
+h2{font-size:19px;margin-top:0}
+.tables{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:10px}
+.table-btn{padding:16px 5px;border:1px solid #2d805b;background:#143c2d;color:#eafff1;border-radius:12px;cursor:pointer}
+.table-btn.active{background:#e0a53c;color:#171717;border-color:#f3c46f}
+.table-btn small{display:block;margin-top:7px}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+button,input,select{font:inherit}
+input,select{width:100%;padding:10px;margin:5px 0 10px;border:1px solid #344258;border-radius:8px;background:#0d1726;color:white}
+button{border:0;border-radius:8px;padding:10px 13px;cursor:pointer;font-weight:bold}
+.primary{background:#35c781;color:#062718}
+.secondary{background:#27364b;color:white}
+.danger{background:#a83243;color:white}
+.product{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #293549}
+.product button{background:#286c50;color:white}
+#cart{padding:0;list-style:none}
+#cart li{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #293549}
+.total{font-size:22px;color:#64e2a0;font-weight:bold;margin:15px 0}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.actions button{flex:1}
+table{width:100%;border-collapse:collapse}
+td,th{text-align:left;padding:9px;border-bottom:1px solid #293549}
+footer{text-align:center;padding:25px;color:#8292a8}
+@media(max-width:720px){.layout{grid-template-columns:1fr}header h1{font-size:21px}}
+@media print{
+body{background:white;color:black}
+body *{visibility:hidden}
+#receipt,#receipt *{visibility:visible}
+#receipt{position:absolute;left:0;top:0;width:100%;padding:10px;color:black;background:white;font-size:12px}
+#receipt h2,#receipt p{text-align:center}
+#receipt table{font-size:12px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎱 Bilyardxona POS</h1>
+  <p>Stollar • Buyurtmalar • Kassa • Chek</p>
+</header>
+
+<main>
+  <section class="stats">
+    <div class="stat"><span>Bugungi savdo</span><strong id="sales">0 so'm</strong></div>
+    <div class="stat"><span>Naqd tushum</span><strong id="cash">0 so'm</strong></div>
+    <div class="stat"><span>Karta tushumi</span><strong id="card">0 so'm</strong></div>
+    <div class="stat"><span>Band stollar</span><strong id="busy">0 / 20</strong></div>
+  </section>
+
+  <section class="panel">
+    <h2>🟢 Bilyard stollari</h2>
+    <p style="color:#aab8ca">Stolni tanlang. Narx: soatiga 30 000 so'm.</p>
+    <div class="tables" id="tables"></div>
+  </section>
+
+  <div class="layout">
+    <section class="panel">
+      <h2>🛒 Mahsulotlar</h2>
+      <div id="products"></div>
+      <h2 style="margin-top:20px">➕ Mahsulot qo‘shish</h2>
+      <input id="newName" placeholder="Mahsulot nomi">
+      <input id="newPrice" type="number" min="1" placeholder="Narxi (so'm)">
+      <button class="secondary" onclick="addProduct()">Mahsulot qo‘shish</button>
+    </section>
+
+    <section class="panel">
+      <h2 id="orderTitle">🧾 Buyurtma</h2>
+      <p id="tableStatus">Avval stolni tanlang</p>
+      <ul id="cart"></ul>
+      <div class="total">Jami: <span id="total">0 so'm</span></div>
+      <label for="payment">To‘lov turi</label>
+      <select id="payment">
+        <option value="Naqd">Naqd</option>
+        <option value="Karta">Karta</option>
+      </select>
+      <div class="actions">
+        <button class="primary" onclick="checkout()">To‘lov va chek</button>
+        <button class="secondary" onclick="printCurrent()">Chek chiqarish</button>
+        <button class="danger" onclick="clearOrder()">Buyurtmani bekor qilish</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top:16px">
+    <h2>📊 Oxirgi savdolar</h2>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Vaqt</th><th>Buyurtma</th><th>To‘lov</th><th>Summa</th><th>Chek</th></tr></thead>
+        <tbody id="history"></tbody>
+      </table>
+    </div>
+    <button class="secondary" style="margin-top:12px" onclick="resetSales()">Kunlik hisobni nolga tushirish</button>
+  </section>
+</main>
+
+<div id="receipt" style="display:none"></div>
+<footer>Bilyardxona POS • Telefon va kompyuter uchun</footer>
+
+<script>
+const money = n => Math.round(n).toLocaleString("uz-UZ") + " so'm";
+const defaultProducts = [
+  {id:1,name:"Cola",price:10000},
+  {id:2,name:"Pepsi",price:10000},
+  {id:3,name:"Red Bull",price:25000},
+  {id:4,name:"Flash",price:12000},
+  {id:5,name:"Hot dog",price:15000},
+  {id:6,name:"Pista",price:10000}
+];
+let state;
+try {
+  state = JSON.parse(localStorage.getItem("bilyardPosV1")) || {};
+} catch(e) { state = {}; }
+
+state.products = Array.isArray(state.products) ? state.products : defaultProducts;
+state.tables = state.tables || {};
+state.salesList = Array.isArray(state.salesList) ? state.salesList : [];
+state.sales = Number(state.sales) || 0;
+state.cash = Number(state.cash) || 0;
+state.card = Number(state.card) || 0;
+let selected = null;
+let currentReceipt = null;
+
+function save(){
+  localStorage.setItem("bilyardPosV1", JSON.stringify(state));
+}
+function getTable(id){
+  if(!state.tables[id]) state.tables[id] = {start:null,cart:[]};
+  return state.tables[id];
+}
+function elapsed(t){
+  return t.start ? Math.max(0,Math.ceil((Date.now()-t.start)/60000)) : 0;
+}
+function tableCost(t){
+  return Math.ceil(elapsed(t)/60)*30000;
+}
+function renderTables(){
+  const root=document.getElementById("tables");
+  root.innerHTML="";
+  let busy=0;
+  for(let i=1;i<=20;i++){
+    const t=getTable(i);
+    if(t.start) busy++;
+    const b=document.createElement("button");
+    b.className="table-btn"+(selected===i?" active":"");
+    b.innerHTML=`Stol ${i}<small>${t.start?"Band":"Bo‘sh"}</small>`;
+    b.onclick=()=>{selected=i;render();};
+    root.appendChild(b);
+  }
+  document.getElementById("busy").textContent=busy+" / 20";
+}
+function renderProducts(){
+  const root=document.getElementById("products");
+  root.innerHTML="";
+  state.products.forEach(p=>{
+    const row=document.createElement("div");
+    row.className="product";
+    const label=document.createElement("span");
+    label.textContent=p.name+" — "+money(p.price);
+    const btn=document.createElement("button");
+    btn.textContent="+ Qo‘shish";
+    btn.onclick=()=>addToOrder(p.id);
+    row.append(label,btn);
+    root.appendChild(row);
+  });
+}
+function renderOrder(){
+  const cart=document.getElementById("cart");
+  cart.innerHTML="";
+  if(!selected){
+    document.getElementById("orderTitle").textContent="🧾 Buyurtma";
+    document.getElementById("tableStatus").textContent="Avval stolni tanlang";
+    document.getElementById("total").textContent=money(0);
+    return;
+  }
+  const t=getTable(selected);
+  document.getElementById("orderTitle").textContent="🧾 Stol "+selected+" buyurtmasi";
+  document.getElementById("tableStatus").textContent=t.start?
+    "O‘ynagan vaqt: "+elapsed(t)+" daqiqa":"Stol bo‘sh. Boshlash uchun stolni yana bosing.";
+  t.cart.forEach((item,index)=>{
+    const li=document.createElement("li");
+    const label=document.createElement("span");
+    label.textContent=item.name+" × "+item.qty;
+    const right=document.createElement("span");
+    right.textContent=money(item.price*item.qty)+" ";
+    const remove=document.createElement("button");
+    remove.textContent="×";
+    remove.className="danger";
+    remove.onclick=()=>{t.cart.splice(index,1);save();render();};
+    right.appendChild(remove);
+    li.append(label,right);
+    cart.appendChild(li);
+  });
+  document.getElementById("total").textContent=money(orderTotal(t));
+}
+function orderTotal(t){
+  return t.cart.reduce((sum,x)=>sum+x.price*x.qty,0)+(t.start?Math.ceil(elapsed(t)/60)*30000:0);
+}
+function renderHistory(){
+  document.getElementById("history").innerHTML=state.salesList.slice(-20).reverse().map((s,i)=>
+    `<tr><td>${s.time}</td><td>${s.name}</td><td>${s.payment}</td><td>${money(s.total)}</td><td><button class="secondary" onclick="printSale(${state.salesList.length-1-i})">Chek</button></td></tr>`
+  ).join("");
+}
+function render(){
+  renderTables();renderProducts();renderOrder();renderHistory();
+  document.getElementById("sales").textContent=money(state.sales);
+  document.getElementById("cash").textContent=money(state.cash);
+  document.getElementById("card").textContent=money(state.card);
+}
+function addToOrder(id){
+  if(!selected){alert("Avval stolni tanlang.");return;}
+  const t=getTable(selected);
+  if(!t.start){
+    if(!confirm("Stolni ishga tushirasizmi?"))return;
+    t.start=Date.now();
+  }
+  const p=state.products.find(x=>x.id===id);
+  if(!p)return;
+  const existing=t.cart.find(x=>x.id===id);
+  if(existing)existing.qty++;
+  else t.cart.push({id:p.id,name:p.name,price:p.price,qty:1});
+  save();render();
+}
+function addProduct(){
+  const name=document.getElementById("newName").value.trim();
+  const price=Number(document.getElementById("newPrice").value);
+  if(!name||price<=0){alert("Mahsulot nomi va narxini to‘g‘ri kiriting.");return;}
+  state.products.push({id:Date.now(),name,price});
+  document.getElementById("newName").value="";
+  document.getElementById("newPrice").value="";
+  save();render();
+}
+function checkout(){
+  if(!selected){alert("Avval stolni tanlang.");return;}
+  const t=getTable(selected);
+  if(!t.start&&!t.cart.length){alert("Buyurtma bo‘sh.");return;}
+  const total=orderTotal(t);
+  if(total<=0){alert("Summa nol.");return;}
+  const payment=document.getElementById("payment").value;
+  const sale={
+    time:new Date().toLocaleString("uz-UZ"),
+    name:"Stol "+selected,
+    payment,total,
+    items:t.cart.map(x=>({...x})),
+    minutes:elapsed(t),
+    tableCost:t.start?Math.ceil(elapsed(t)/60)*30000:0
+  };
+  state.salesList.push(sale);
+  state.sales+=total;
+  if(payment==="Naqd")state.cash+=total;else state.card+=total;
+  t.start=null;t.cart=[];
+  save();currentReceipt=sale;render();showReceipt(sale);window.print();
+}
+function clearOrder(){
+  if(!selected){alert("Avval stolni tanlang.");return;}
+  if(!confirm("Stol buyurtmasini bekor qilasizmi?"))return;
+  const t=getTable(selected);t.start=null;t.cart=[];
+  save();render();
+}
+function showReceipt(s){
+  const items=(s.items||[]).map(x=>
+    `<tr><td>${x.name} × ${x.qty}</td><td style="text-align:right">${money(x.price*x.qty)}</td></tr>`
+  ).join("");
+  document.getElementById("receipt").innerHTML=
+    `<h2>BILYARDXONA</h2><p>To‘lov cheki</p><hr>
+    <p>${s.time}</p><p>${s.name}</p><p>O‘yin vaqti: ${s.minutes||0} daqiqa</p>
+    <table>${items}${s.tableCost?`<tr><td>Stol haqi</td><td style="text-align:right">${money(s.tableCost)}</td></tr>`:""}</table>
+    <hr><h3>JAMI: ${money(s.total)}</h3><p>To‘lov: ${s.payment}</p>
+    <p>Xaridingiz uchun rahmat!</p><hr>`;
+}
+function printCurrent(){
+  if(currentReceipt){showReceipt(currentReceipt);window.print();return;}
+  if(!selected){alert("Stolni tanlang yoki avval savdo qiling.");return;}
+  const t=getTable(selected);
+  if(!t.start&&!t.cart.length){alert("Chek chiqarish uchun buyurtma yo‘q.");return;}
+  showReceipt({
+    time:new Date().toLocaleString("uz-UZ"),
+    name:"Stol "+selected,
+    payment:document.getElementById("payment").value,
+    total:orderTotal(t),items:t.cart,minutes:elapsed(t),
+    tableCost:t.start?Math.ceil(elapsed(t)/60)*30000:0
+  });
+  window.print();
+}
+function printSale(index){
+  const s=state.salesList[index];if(!s)return;
+  showReceipt(s);window.print();
+}
+function resetSales(){
+  if(!confirm("Kunlik savdo hisobini nolga tushirasizmi?"))return;
+  state.sales=0;state.cash=0;state.card=0;state.salesList=[];
+  save();render();
+}
+render();
+setInterval(()=>{if(selected)renderOrder();},15000);
+</script>
+</body>
+</html>
